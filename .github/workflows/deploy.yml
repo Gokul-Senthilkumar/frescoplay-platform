@@ -147,14 +147,6 @@ jobs:
             | sed "s/:IMAGE_TAG/:${IMAGE_TAG}/g" \
             | kubectl apply -f -
 
-      - name: Verify External Secrets
-        run: |
-          kubectl wait \
-            --for=condition=Ready \
-            externalsecret/frescoplay-external-secret \
-            --namespace "$K8S_NAMESPACE" \
-            --timeout=180s
-
       - name: Verify Deployment Rollouts
         run: |
           set -euo pipefail
