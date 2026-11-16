@@ -6,9 +6,7 @@ namespace: frescoplay
 resources:
   # Configuration
   - config/configmap.yaml
-  - config/secret-store.yaml
-  - config/external-secret.yaml
-
+  
   # Deployments
   - frontend/deployment.yaml
   - user-service/deployment.yaml
