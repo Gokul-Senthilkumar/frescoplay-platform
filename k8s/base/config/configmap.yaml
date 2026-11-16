@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frescoplay-config
+data:
+  DB_HOST: "frescoplay-mysql-prod.cumvig3f6uh8.us-east-1.rds.amazonaws.com"
+  DB_PORT: "3306"
+
+  USER_SERVICE_URL: "http://user-service:8081"
+  COURSE_SERVICE_URL: "http://course-service:8082"
+  ASSESSMENT_SERVICE_URL: "http://assessment-service:8083"
+  LAB_SERVICE_URL: "http://lab-service:8084"

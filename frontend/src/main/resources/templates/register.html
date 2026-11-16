@@ -1,0 +1,105 @@
+
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register | Fresco Play</title>
+
+    <link rel="stylesheet" th:href="@{/css/login.css}">
+</head>
+
+<body>
+
+<div class="login-container">
+
+    <div class="login-card">
+
+        <div class="brand">
+            <div class="brand-icon">F</div>
+            <h1>Fresco Play</h1>
+        </div>
+
+        <div class="welcome-section">
+            <h2>Create Your Account</h2>
+            <p>Join Fresco Play and start your learning journey.</p>
+        </div>
+
+        <div th:if="${error}"
+             class="error-message"
+             th:text="${error}">
+        </div>
+
+        <form th:action="@{/register}" method="post">
+
+            <div class="form-group">
+                <label for="fullName">Full Name</label>
+                <input
+                    type="text"
+                    id="fullName"
+                    name="fullName"
+                    placeholder="Enter your full name"
+                    maxlength="100"
+                    autocomplete="name"
+                    required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email Address</label>
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="Enter your email"
+                    maxlength="150"
+                    autocomplete="email"
+                    required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Minimum 8 characters"
+                    minlength="8"
+                    maxlength="72"
+                    autocomplete="new-password"
+                    required>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <input
+                    type="password"
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    placeholder="Re-enter your password"
+                    minlength="8"
+                    maxlength="72"
+                    autocomplete="new-password"
+                    required>
+            </div>
+
+            <button type="submit" class="login-button">
+                Create Account
+            </button>
+
+        </form>
+
+        <div class="register-footer">
+            Already have an account?
+            <a th:href="@{/}">Sign In</a>
+        </div>
+
+        <div class="login-footer">
+            Learn. Practice. Grow.
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+</html>

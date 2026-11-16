@@ -1,0 +1,27 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: frescoplay
+
+resources:
+  # Configuration
+  - config/configmap.yaml
+  - config/secret-store.yaml
+  - config/external-secret.yaml
+
+  # Deployments
+  - frontend/deployment.yaml
+  - user-service/deployment.yaml
+  - course-service/deployment.yaml
+  - assessment-service/deployment.yaml
+  - lab-service/deployment.yaml
+
+  # Services
+  - frontend/service.yaml
+  - user-service/service.yaml
+  - course-service/service.yaml
+  - assessment-service/service.yaml
+  - lab-service/service.yaml
+
+  # Ingress
+  - ingress/ingress.yaml
