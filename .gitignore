@@ -31,6 +31,9 @@ Complete_Console.txt
 # Database backups
 *.sql
 
+# Track Flyway database migration scripts
+!**/src/main/resources/db/migration/*.sql
+
 # Environment-specific files
 .env.*
 
