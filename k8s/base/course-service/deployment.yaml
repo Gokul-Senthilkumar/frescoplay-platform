@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: course-service
+  namespace: frescoplay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: course-service
+  template:
+    metadata:
+      labels:
+        app: course-service
+    spec:
+      containers:
+        - name: course-service
+          image: 790267626946.dkr.ecr.us-east-1.amazonaws.com/frescoplay-course-service:IMAGE_TAG
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8082
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: frescoplay-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: frescoplay-config
+                  key: DB_PORT
+            - name: COURSE_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: COURSE_DB_USERNAME
+            - name: COURSE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: COURSE_DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: JWT_SECRET
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8082
+            periodSeconds: 20

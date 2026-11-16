@@ -1,0 +1,135 @@
+
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Courses | Fresco Play</title>
+
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <link rel="stylesheet" th:href="@{/css/courses.css}">
+</head>
+
+<body>
+
+<div class="app-layout">
+
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-icon">F</div>
+            <h2>Fresco Play</h2>
+        </div>
+
+        <nav class="navigation">
+            <a href="/dashboard" class="nav-link">Dashboard</a>
+            <a href="/courses" class="nav-link active">Courses</a>
+            <a href="/assessments" class="nav-link">Assessments</a>
+            <a href="/labs" class="nav-link">Technical Labs</a>
+        </nav>
+
+        <form th:action="@{/logout}"
+              method="post"
+              class="logout-form">
+
+            <button type="submit" class="logout-button">
+                Sign Out
+            </button>
+
+        </form>
+
+    </aside>
+
+    <main class="main-content">
+
+        <header class="page-header">
+            <h1>Explore Courses</h1>
+            <p>Discover learning programs and improve your skills.</p>
+        </header>
+
+        <!-- Success message -->
+        <div th:if="${success}"
+             class="success-message"
+             th:text="${success}">
+        </div>
+
+        <!-- Error message -->
+        <div th:if="${error}"
+             class="error-message"
+             th:text="${error}">
+        </div>
+
+        <!-- Course listing -->
+        <section class="course-grid">
+
+            <article class="course-card"
+                     th:each="course : ${courses}">
+
+                <div class="course-category"
+                     th:text="${course.category}">
+                    Cloud Computing
+                </div>
+
+                <h2 th:text="${course.title}">
+                    AWS Cloud Fundamentals
+                </h2>
+
+                <p class="course-description"
+                   th:text="${course.description}">
+                    Learn AWS cloud basics.
+                </p>
+
+                <div class="course-details">
+
+                    <span th:text="${course.level}">
+                        BEGINNER
+                    </span>
+
+                    <span th:text="${course.durationHours} + ' Hours'">
+                        10 Hours
+                    </span>
+
+                </div>
+
+                <!-- Already enrolled -->
+                <div th:if="${course.enrolled}"
+                     class="enrolled-badge">
+
+                    ✓ Enrolled
+
+                </div>
+
+                <!-- Not yet enrolled -->
+                <form th:unless="${course.enrolled}"
+                      th:action="@{/courses/{id}/enroll(id=${course.id})}"
+                      method="post">
+
+                    <button type="submit"
+                            class="enroll-button">
+
+                        Enroll Now
+
+                    </button>
+
+                </form>
+
+            </article>
+
+            <!-- Empty course listing -->
+            <div class="empty-message"
+                 th:if="${courses == null or courses.isEmpty()}">
+
+                No courses available currently.
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+</body>
+</html>

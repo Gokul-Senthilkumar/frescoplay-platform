@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: assessment-service
+  namespace: frescoplay
+spec:
+  type: ClusterIP
+  selector:
+    app: assessment-service
+  ports:
+    - name: http
+      port: 8083
+      targetPort: 8083
+      protocol: TCP

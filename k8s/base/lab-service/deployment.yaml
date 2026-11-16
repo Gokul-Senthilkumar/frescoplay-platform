@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lab-service
+  namespace: frescoplay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lab-service
+  template:
+    metadata:
+      labels:
+        app: lab-service
+    spec:
+      containers:
+        - name: lab-service
+          image: 790267626946.dkr.ecr.us-east-1.amazonaws.com/frescoplay-lab-service:IMAGE_TAG
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8084
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: frescoplay-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: frescoplay-config
+                  key: DB_PORT
+            - name: LAB_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: LAB_DB_USERNAME
+            - name: LAB_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: LAB_DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: JWT_SECRET
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: 500m
+              memory: 1Gi
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8084
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8084
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8084
+            periodSeconds: 20

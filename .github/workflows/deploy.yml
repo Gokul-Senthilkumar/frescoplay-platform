@@ -1,4 +1,4 @@
-name: Deploy Education Platform to Amazon EKS
+name: FrescoPlay Microservices CD
 
 on:
   push:
@@ -10,137 +10,185 @@ permissions:
   id-token: write
 
 concurrency:
-  group: education-platform-deployment
+  group: frescoplay-production-deployment
   cancel-in-progress: false
 
 env:
   AWS_REGION: us-east-1
+  AWS_ACCOUNT_ID: "790267626946"
+  ECR_REGISTRY: 790267626946.dkr.ecr.us-east-1.amazonaws.com
+  K8S_NAMESPACE: frescoplay
   EKS_CLUSTER_NAME: eks-cicd
-  ECR_REPOSITORY: education-platform
-  K8S_NAMESPACE: education-platform
-  K8S_DEPLOYMENT: education-platform
-  K8S_CONTAINER: education-platform
+  AWS_ROLE_ARN: arn:aws:iam::790267626946:role/GitHubActions-FrescoPlay-Role
 
 jobs:
-  deploy:
-    name: Build and Deploy
+  build-push-deploy:
+    name: Build, Push and Deploy FrescoPlay
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
 
 
     steps:
-      - name: Checkout source
+      - name: Checkout Source Code
         uses: actions/checkout@v4
 
       - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: "21"
           cache: maven
 
-      - name: Build and Test
-        run: mvn --batch-mode clean verify
+      - name: Build and Test All Microservices
+        run: mvn --batch-mode --no-transfer-progress clean verify
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v6
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Validate Deployment Configuration
+        run: |
+          set -euo pipefail
+
+          test -n "$AWS_ROLE_ARN"
+          test -n "$EKS_CLUSTER_NAME"
+
+          kubectl kustomize k8s/overlays/lab \
+            > /tmp/frescoplay-manifests.yaml
+
+          echo "Kubernetes manifests rendered successfully."
+
+      - name: Configure AWS Credentials Using OIDC
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::498524284921:role/GitHubActions-EducationPlatform-Role
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Verify AWS Identity
         run: aws sts get-caller-identity
 
       - name: Login to Amazon ECR
-        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Check for Existing Immutable Image
-        id: image-check
+      - name: Build and Push Microservice Images
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           set -euo pipefail
 
-          ERROR_FILE=$(mktemp)
-          trap 'rm -f "$ERROR_FILE"' EXIT
+          publish_image() {
+            local repository="$1"
+            local dockerfile="$2"
+            local context="$3"
+            local image="$ECR_REGISTRY/$repository:$IMAGE_TAG"
 
-          if aws ecr describe-images \
-            --region "$AWS_REGION" \
-            --repository-name "$ECR_REPOSITORY" \
-            --image-ids "imageTag=$IMAGE_TAG" \
-            >/dev/null 2>"$ERROR_FILE"; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
-            echo "Image already exists; it will be reused."
-          elif grep -q "ImageNotFoundException" "$ERROR_FILE"; then
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "Image does not exist yet; it will be built."
-          else
-            cat "$ERROR_FILE"
-            exit 1
-          fi
+            echo "Checking ECR image: $image"
 
-      - name: Pull Existing Image
-        if: steps.image-check.outputs.exists == 'true'
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker pull "$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+            if aws ecr describe-images \
+              --region "$AWS_REGION" \
+              --repository-name "$repository" \
+              --image-ids "imageTag=$IMAGE_TAG" \
+              >/dev/null 2>&1; then
 
-      - name: Build Docker Image
-        if: steps.image-check.outputs.exists == 'false'
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker build \
-            --tag "$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
-            .
+              echo "Image already exists. Skipping: $image"
 
-      - name: Push Image to ECR
-        if: steps.image-check.outputs.exists == 'false'
-        env:
-          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ github.sha }}
-        run: |
-          docker push "$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+            else
+              echo "Building image: $image"
 
-      - name: Update kubeconfig
+              docker build \
+                --file "$dockerfile" \
+                --tag "$image" \
+                "$context"
+
+              echo "Pushing image: $image"
+              docker push "$image"
+            fi
+          }
+
+          publish_image frescoplay-frontend \
+            frontend/Dockerfile frontend/
+
+          publish_image frescoplay-user-service \
+            user-service/Dockerfile user-service/
+
+          publish_image frescoplay-course-service \
+            course-service/Dockerfile course-service/
+
+          publish_image frescoplay-assessment-service \
+            assessment-service/Dockerfile assessment-service/
+
+          publish_image frescoplay-lab-service \
+            lab-service/Dockerfile lab-service/
+
+      - name: Configure EKS Access
         run: |
           aws eks update-kubeconfig \
             --region "$AWS_REGION" \
             --name "$EKS_CLUSTER_NAME"
 
-      - name: Apply Application Manifests
+      - name: Verify Namespace Deployment Permissions
+        run: |
+          set -euo pipefail
+
+          kubectl auth can-i create deployments \
+            --namespace "$K8S_NAMESPACE"
+
+          kubectl auth can-i create services \
+            --namespace "$K8S_NAMESPACE"
+
+      - name: Deploy FrescoPlay to EKS
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          kubectl apply -f k8s/serviceaccount.yaml
-          kubectl apply -f k8s/service.yaml
+          set -euo pipefail
 
-          sed "s|REPLACE_WITH_GIT_SHA|$IMAGE_TAG|g" \
-            k8s/deployment.yaml | kubectl apply -f -
+          echo "Deploying image tag: $IMAGE_TAG"
 
-          kubectl apply -f k8s/ingress.yaml
+          kubectl kustomize k8s/overlays/lab \
+            | sed "s/:IMAGE_TAG/:${IMAGE_TAG}/g" \
+            | kubectl apply -f -
 
-      - name: Wait for Deployment Rollout
+      - name: Verify External Secrets
         run: |
-          kubectl rollout status \
-            deployment/"$K8S_DEPLOYMENT" \
+          kubectl wait \
+            --for=condition=Ready \
+            externalsecret/frescoplay-external-secret \
             --namespace "$K8S_NAMESPACE" \
-            --timeout=5m
+            --timeout=180s
 
-      - name: Verify Deployment
+      - name: Verify Deployment Rollouts
         run: |
-          kubectl get deployment "$K8S_DEPLOYMENT" \
-            --namespace "$K8S_NAMESPACE"
+          set -euo pipefail
 
+          for deployment in \
+            frontend \
+            user-service \
+            course-service \
+            assessment-service \
+            lab-service
+          do
+            echo "Checking rollout: $deployment"
+
+            kubectl rollout status \
+              "deployment/$deployment" \
+              --namespace "$K8S_NAMESPACE" \
+              --timeout=5m
+          done
+
+      - name: Deployment Summary
+        if: always()
+        run: |
+          echo "===== Deployments ====="
+          kubectl get deployments \
+            --namespace "$K8S_NAMESPACE" || true
+
+          echo "===== Pods ====="
           kubectl get pods \
-            --namespace "$K8S_NAMESPACE" -o wide
+            --namespace "$K8S_NAMESPACE" -o wide || true
 
+          echo "===== Services ====="
           kubectl get services \
-            --namespace "$K8S_NAMESPACE"
+            --namespace "$K8S_NAMESPACE" || true
 
+          echo "===== Ingress ====="
           kubectl get ingress \
-            --namespace "$K8S_NAMESPACE"
+            --namespace "$K8S_NAMESPACE" || true

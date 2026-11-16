@@ -1,0 +1,185 @@
+
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Assessments | Fresco Play</title>
+
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <link rel="stylesheet" th:href="@{/css/assessments.css}">
+</head>
+
+<body>
+
+<div class="app-layout">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-icon">F</div>
+            <h2>Fresco Play</h2>
+        </div>
+
+        <nav class="navigation">
+            <a href="/dashboard" class="nav-link">Dashboard</a>
+            <a href="/courses" class="nav-link">Courses</a>
+            <a href="/assessments" class="nav-link active">Assessments</a>
+            <a href="/labs" class="nav-link">Technical Labs</a>
+        </nav>
+
+        <form th:action="@{/logout}" method="post" class="logout-form">
+            <button type="submit" class="logout-button">
+                Sign Out
+            </button>
+        </form>
+
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <header class="page-header">
+            <h1>Assessments</h1>
+            <p>Test your knowledge and track your results.</p>
+        </header>
+
+        <!-- Success Message -->
+        <div th:if="${success}"
+             class="success-message"
+             th:text="${success}">
+        </div>
+
+        <!-- Error Message -->
+        <div th:if="${error}"
+             class="error-message"
+             th:text="${error}">
+        </div>
+
+        <!-- Assessment List -->
+        <section class="assessment-grid">
+
+            <article class="assessment-card"
+                     th:each="assessment : ${assessments}">
+
+                <div class="assessment-icon">📝</div>
+
+                <h2 th:text="${assessment.title}">
+                    AWS Cloud Fundamentals Quiz
+                </h2>
+
+                <p class="assessment-description"
+                   th:text="${assessment.description}">
+                    Test your knowledge of AWS cloud basics.
+                </p>
+
+                <div class="assessment-details">
+
+                    <span th:text="|${assessment.totalQuestions} Questions|">
+                        10 Questions
+                    </span>
+
+                    <span th:text="|${assessment.totalMarks} Marks|">
+                        100 Marks
+                    </span>
+
+                </div>
+
+                <!-- Already Submitted -->
+                <div th:if="${assessment.submitted}"
+                     class="completed-badge">
+
+                    <span>✓ Assessment Submitted</span>
+
+                    <strong th:text="|${assessment.submittedScore} / ${assessment.submittedTotalMarks}|">
+                        85 / 100
+                    </strong>
+
+                </div>
+
+                <!-- Not Yet Submitted -->
+                <form th:unless="${assessment.submitted}"
+                      th:action="@{/assessments/{id}/submit(id=${assessment.id})}"
+                      method="post"
+                      class="assessment-form">
+
+                    <label th:for="${'score-' + assessment.id}">
+                        Enter demo score
+                    </label>
+
+                    <input type="number"
+                           th:id="${'score-' + assessment.id}"
+                           name="score"
+                           min="0"
+                           th:max="${assessment.totalMarks}"
+                           required
+                           placeholder="Enter your score">
+
+                    <button type="submit"
+                            class="submit-button">
+                        Submit Assessment
+                    </button>
+
+                </form>
+
+            </article>
+
+            <!-- No Assessments -->
+            <div class="empty-message"
+                 th:if="${assessments == null or assessments.isEmpty()}">
+
+                No assessments available currently.
+
+            </div>
+
+        </section>
+
+        <!-- Assessment Results -->
+        <section class="results-section">
+
+            <h2>My Assessment Results</h2>
+
+            <div class="result-card"
+                 th:each="result : ${results}">
+
+                <div>
+                    <strong th:text="${result.assessmentId}">
+                        1
+                    </strong>
+                    <span>Assessment ID</span>
+                </div>
+
+                <div>
+                    <strong th:text="|${result.score} / ${result.totalMarks}|">
+                        85 / 100
+                    </strong>
+                    <span>Score</span>
+                </div>
+
+                <div>
+                    <strong th:text="${result.status}">
+                        SUBMITTED
+                    </strong>
+                    <span>Status</span>
+                </div>
+
+            </div>
+
+            <p class="empty-message"
+               th:if="${results == null or results.isEmpty()}">
+
+                You haven't submitted any assessments yet.
+
+            </p>
+
+        </section>
+
+    </main>
+
+</div>
+
+</body>
+</html>

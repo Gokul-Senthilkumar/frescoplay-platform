@@ -1,0 +1,86 @@
+services:
+  user-service:
+    image: fresco-user-service:1.0
+    container_name: fresco-user-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DB_URL: jdbc:mysql://host.docker.internal:3306/fresco_users
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8081:8081"
+    networks:
+      - fresco-network
+
+  course-service:
+    image: fresco-course-service:1.0
+    container_name: fresco-course-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      COURSE_DB_URL: jdbc:mysql://host.docker.internal:3306/fresco_courses
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8082:8082"
+    networks:
+      - fresco-network
+
+  assessment-service:
+    image: fresco-assessment-service:1.0
+    container_name: fresco-assessment-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      ASSESSMENT_DB_URL: jdbc:mysql://host.docker.internal:3306/fresco_assessments
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8083:8083"
+    networks:
+      - fresco-network
+
+  lab-service:
+    image: fresco-lab-service:1.0
+    container_name: fresco-lab-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      LAB_DB_URL: jdbc:mysql://host.docker.internal:3306/fresco_labs
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "8084:8084"
+    networks:
+      - fresco-network
+
+  frontend:
+    image: fresco-frontend:1.0
+    container_name: fresco-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      user.service.url: http://user-service:8081
+      course.service.url: http://course-service:8082
+      assessment.service.url: http://assessment-service:8083
+      lab.service.url: http://lab-service:8084
+    depends_on:
+      - user-service
+      - course-service
+      - assessment-service
+      - lab-service
+    networks:
+      - fresco-network
+
+networks:
+  fresco-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.22.0.0/16

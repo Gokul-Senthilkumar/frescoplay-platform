@@ -49,9 +49,16 @@ alb-controller-serviceaccount.yaml
 # Kubernetes Secret manifests
 k8s/secret.yaml
 k8s/secrets.yaml
+k8s/config/secrets.yaml
 
 # Local lab output and state
 .aws/
 *.tfstate
 *.tfstate.*
 crash.log
+
+# Kubernetes secrets
+**/secrets.yaml
+**/secret.yaml
+# Local AWS lab files and credentials
+/tmp/

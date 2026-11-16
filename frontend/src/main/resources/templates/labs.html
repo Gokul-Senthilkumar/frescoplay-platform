@@ -1,0 +1,114 @@
+
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Technical Labs | Fresco Play</title>
+
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+    <link rel="stylesheet" th:href="@{/css/labs.css}">
+</head>
+
+<body>
+
+<div class="app-layout">
+
+    <aside class="sidebar">
+
+        <div class="brand">
+            <div class="brand-icon">F</div>
+            <h2>Fresco Play</h2>
+        </div>
+
+        <nav class="navigation">
+            <a href="/dashboard" class="nav-link">Dashboard</a>
+            <a href="/courses" class="nav-link">Courses</a>
+            <a href="/assessments" class="nav-link">Assessments</a>
+            <a href="/labs" class="nav-link active">Technical Labs</a>
+        </nav>
+
+        <form th:action="@{/logout}" method="post" class="logout-form">
+            <button type="submit" class="logout-button">Sign Out</button>
+        </form>
+
+    </aside>
+
+    <main class="main-content">
+
+        <header class="page-header">
+            <h1>Technical Labs</h1>
+            <p>Practice technical concepts through hands-on labs.</p>
+        </header>
+
+        <div th:if="${success}"
+             class="success-message"
+             th:text="${success}"></div>
+
+        <div th:if="${error}"
+             class="error-message"
+             th:text="${error}"></div>
+
+        <section class="lab-grid">
+
+            <article class="lab-card" th:each="lab : ${labs}">
+
+                <div class="lab-category"
+                     th:text="${lab.category}">
+                    AWS Security
+                </div>
+
+                <h2 th:text="${lab.title}">
+                    AWS S3 Security Lab
+                </h2>
+
+                <p class="lab-description"
+                   th:text="${lab.description}">
+                    Practice securing an Amazon S3 bucket.
+                </p>
+
+                <div class="lab-details">
+                    <span th:text="${lab.difficulty}">BEGINNER</span>
+                </div>
+
+                <div class="instructions-section">
+                    <h3>Lab Instructions</h3>
+
+                    <p class="lab-instructions"
+                       th:text="${lab.instructions}">
+                        Complete the lab instructions.
+                    </p>
+                </div>
+
+                <div th:if="${lab.completed}"
+                     class="completed-badge">
+                    ✓ Completed
+                </div>
+
+                <form th:unless="${lab.completed}"
+                      th:action="@{/labs/{id}/complete(id=${lab.id})}"
+                      method="post">
+
+                    <button type="submit" class="complete-button">
+                        Mark as Completed
+                    </button>
+
+                </form>
+
+            </article>
+
+            <div class="empty-message"
+                 th:if="${labs == null or labs.isEmpty()}">
+                No technical labs available currently.
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+</body>
+</html>

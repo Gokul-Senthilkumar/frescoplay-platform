@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | Fresco Play</title>
+    <link rel="stylesheet" th:href="@{/css/dashboard.css}">
+</head>
+<body>
+
+<div class="app-layout">
+
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-icon">F</div>
+            <h2>Fresco Play</h2>
+        </div>
+
+        <nav class="navigation">
+            <a href="/dashboard" class="nav-link active">Dashboard</a>
+            <a href="/courses" class="nav-link">Courses</a>
+            <a href="/assessments" class="nav-link">Assessments</a>
+            <a href="/labs" class="nav-link">Technical Labs</a>
+        </nav>
+
+        <form th:action="@{/logout}" method="post" class="logout-form">
+            <button type="submit" class="logout-button">Sign Out</button>
+        </form>
+    </aside>
+
+    <main class="main-content">
+
+        <header class="topbar">
+            <div>
+                <h1>Dashboard</h1>
+                <p>Your learning overview</p>
+            </div>
+
+            <div class="profile">
+                <div class="avatar">F</div>
+                <span th:text="${employee != null ? employee.fullName : 'Employee'}">
+                    Employee
+                </span>
+            </div>
+        </header>
+
+        <section class="welcome-banner">
+            <div>
+                <h2>Welcome back!</h2>
+                <p>Continue learning, practice your skills and track your progress.</p>
+            </div>
+        </section>
+
+        <section class="stats-section">
+            <div class="stat-card">
+                <div class="stat-icon">📚</div>
+                <p>Available Courses</p>
+                <h2 th:text="${courseCount}">0</h2>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">📝</div>
+                <p>Assessments</p>
+                <h2 th:text="${assessmentCount}">0</h2>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon">💻</div>
+                <p>Technical Labs</p>
+                <h2 th:text="${labCount}">0</h2>
+            </div>
+        </section>
+
+        <section class="content-section">
+            <div class="section-heading">
+                <h2>Explore Learning</h2>
+                <p>Choose an area to continue your journey.</p>
+            </div>
+
+            <div class="learning-grid">
+
+                <a href="/courses" class="learning-card">
+                    <div class="learning-icon">📚</div>
+                    <h3>Courses</h3>
+                    <p>Explore courses and enroll in learning programs.</p>
+                    <span>Explore Courses →</span>
+                </a>
+
+                <a href="/assessments" class="learning-card">
+                    <div class="learning-icon">📝</div>
+                    <h3>Assessments</h3>
+                    <p>Test your knowledge and review your results.</p>
+                    <span>View Assessments →</span>
+                </a>
+
+                <a href="/labs" class="learning-card">
+                    <div class="learning-icon">💻</div>
+                    <h3>Technical Labs</h3>
+                    <p>Practice technical concepts through hands-on labs.</p>
+                    <span>Explore Labs →</span>
+                </a>
+
+            </div>
+        </section>
+
+    </main>
+</div>
+
+</body>
+</html>
