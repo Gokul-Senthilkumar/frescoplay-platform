@@ -15,11 +15,11 @@ concurrency:
 
 env:
   AWS_REGION: us-east-1
-  AWS_ACCOUNT_ID: "790267626946"
-  ECR_REGISTRY: 790267626946.dkr.ecr.us-east-1.amazonaws.com
+  AWS_ACCOUNT_ID: "797515064883"
+  ECR_REGISTRY: 797515064883.dkr.ecr.us-east-1.amazonaws.com
   K8S_NAMESPACE: frescoplay
   EKS_CLUSTER_NAME: eks-cicd
-  AWS_ROLE_ARN: arn:aws:iam::790267626946:role/GitHubActions-FrescoPlay-Role
+  AWS_ROLE_ARN: arn:aws:iam::797515064883:role/GitHubActions-FrescoPlay-Role
 
 jobs:
   build-push-deploy:

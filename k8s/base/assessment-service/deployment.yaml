@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: assessment-service
-          image: 790267626946.dkr.ecr.us-east-1.amazonaws.com/frescoplay-assessment-service:IMAGE_TAG
+          image: 797515064883.dkr.ecr.us-east-1.amazonaws.com/frescoplay-assessment-service:IMAGE_TAG
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8083
