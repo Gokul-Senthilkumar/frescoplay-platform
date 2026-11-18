@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: course-service
-          image: 797515064883.dkr.ecr.us-east-1.amazonaws.com/frescoplay-course-service:IMAGE_TAG
+          image: 296283357585.dkr.ecr.us-east-1.amazonaws.com/frescoplay-course-service:IMAGE_TAG
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8082
