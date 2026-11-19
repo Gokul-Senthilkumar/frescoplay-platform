@@ -3,7 +3,7 @@ kind: ConfigMap
 metadata:
   name: frescoplay-config
 data:
-  DB_HOST: "frescoplay-mysql-prod.cqumsvvr8vcb.us-east-1.rds.amazonaws.com"
+  DB_HOST: "frescoplay-mysql-prod.cixkdhweejzt.us-east-1.rds.amazonaws.com"
   DB_PORT: "3306"
 
   USER_SERVICE_URL: "http://user-service:8081"

@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: user-service
-          image: 296283357585.dkr.ecr.us-east-1.amazonaws.com/frescoplay-user-service:IMAGE_TAG
+          image: 942792846954.dkr.ecr.us-east-1.amazonaws.com/frescoplay-user-service:IMAGE_TAG
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8081
