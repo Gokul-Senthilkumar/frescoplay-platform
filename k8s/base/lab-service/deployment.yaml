@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: lab-service
-          image: 942792846954.dkr.ecr.us-east-1.amazonaws.com/frescoplay-lab-service:IMAGE_TAG
+          image: "${AWS_ACCOUNT_ID}.dkr.ecr.us-east-1.amazonaws.com/frescoplay-lab-service:${IMAGE_TAG}"
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8084

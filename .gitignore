@@ -65,3 +65,7 @@ crash.log
 **/secret.yaml
 # Local AWS lab files and credentials
 /tmp/
+
+.rendered-k8s/
+__pycache__/
+*.pyc
