@@ -53,10 +53,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          AWS_ACCOUNT_ID="$(aws sts get-caller-identity --query Account --output text)"
+          AWS_ACCOUNT_ID="$(aws sts get-caller-identity \
+            --query Account \
+            --output text)"
 
-          if [ -z "$AWS_ACCOUNT_ID" ] || [ "$AWS_ACCOUNT_ID" = "None" ]; then
-            echo "Unable to determine AWS account ID."
+          if [[ ! "$AWS_ACCOUNT_ID" =~ ^[0-9]{12}$ ]]; then
+            echo "Invalid AWS account ID: $AWS_ACCOUNT_ID"
             exit 1
           fi
 
@@ -106,9 +108,7 @@ jobs:
               --repository-name "$repository" \
               --image-ids "imageTag=$IMAGE_TAG" \
               >/dev/null 2>&1; then
-
               echo "Image already exists. Skipping: $image"
-
             else
               echo "Building image: $image"
 
@@ -139,6 +139,8 @@ jobs:
 
       - name: Configure EKS Access
         run: |
+          set -euo pipefail
+
           aws eks update-kubeconfig \
             --region "$AWS_REGION" \
             --name "$EKS_CLUSTER_NAME"
@@ -159,13 +161,36 @@ jobs:
         run: |
           set -euo pipefail
 
+          : "${AWS_ACCOUNT_ID:?AWS_ACCOUNT_ID is missing}"
+          : "${RDS_ENDPOINT:?RDS_ENDPOINT is missing}"
+          : "${IMAGE_TAG:?IMAGE_TAG is missing}"
+
           echo "Deploying image tag: $IMAGE_TAG"
 
           kubectl kustomize k8s/overlays/lab \
-            | sed "s/\${AWS_ACCOUNT_ID}/${AWS_ACCOUNT_ID}/g" \
-            | sed "s/\${RDS_ENDPOINT}/${RDS_ENDPOINT}/g" \
-            | sed "s/:IMAGE_TAG/:${IMAGE_TAG}/g" \
-            | kubectl apply -f -
+            > /tmp/frescoplay-template.yaml
+
+          sed \
+            -e "s/\${AWS_ACCOUNT_ID}/${AWS_ACCOUNT_ID}/g" \
+            -e "s/\${RDS_ENDPOINT}/${RDS_ENDPOINT}/g" \
+            -e "s/\${IMAGE_TAG}/${IMAGE_TAG}/g" \
+            /tmp/frescoplay-template.yaml \
+            > /tmp/frescoplay-rendered.yaml
+
+          if grep -nF '${' /tmp/frescoplay-rendered.yaml; then
+            echo "Unresolved placeholders remain. Deployment stopped."
+            exit 1
+          fi
+
+          if grep -nF ':IMAGE_TAG' /tmp/frescoplay-rendered.yaml; then
+            echo "An old IMAGE_TAG placeholder remains. Deployment stopped."
+            exit 1
+          fi
+
+          echo "Rendered image references and database endpoint:"
+          grep -nE 'image:|DB_HOST:' /tmp/frescoplay-rendered.yaml
+
+          kubectl apply -f /tmp/frescoplay-rendered.yaml
 
       - name: Verify Deployment Rollouts
         run: |
@@ -204,3 +229,9 @@ jobs:
           echo "===== Ingress ====="
           kubectl get ingress \
             --namespace "$K8S_NAMESPACE" || true
+
+          echo "===== Recent Events ====="
+          kubectl get events \
+            --namespace "$K8S_NAMESPACE" \
+            --sort-by=.metadata.creationTimestamp \
+            | tail -n 40 || true
