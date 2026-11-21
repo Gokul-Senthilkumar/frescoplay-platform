@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: lab-service
+  labels:
+    app: lab-service
+    app.kubernetes.io/name: frescoplay
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  type: {{ .Values.labService.service.type }}
+  selector:
+    app: lab-service
+  ports:
+    - name: http
+      protocol: TCP
+      port: {{ .Values.labService.service.port }}
+      targetPort: {{ .Values.labService.containerPort }}

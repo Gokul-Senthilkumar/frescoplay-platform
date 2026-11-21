@@ -1,0 +1,31 @@
+{{- if .Values.labService.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: lab-service
+  labels:
+    app: lab-service
+    app.kubernetes.io/name: frescoplay
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: lab-service
+  minReplicas: {{ .Values.labService.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.labService.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.labService.autoscaling.targetCPUUtilizationPercentage }}
+    - type: Resource
+      resource:
+        name: memory
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.labService.autoscaling.targetMemoryUtilizationPercentage }}
+{{- end }}
+      

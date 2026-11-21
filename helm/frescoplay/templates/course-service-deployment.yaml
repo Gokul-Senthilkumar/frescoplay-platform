@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: course-service
+  labels:
+    app: course-service
+    app.kubernetes.io/name: frescoplay
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  {{- if not .Values.courseService.autoscaling.enabled }}
+  replicas: {{ .Values.courseService.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: course-service
+  template:
+    metadata:
+      labels:
+        app: course-service
+    spec:
+      containers:
+        - name: course-service
+          image: "{{ required "AWS account ID is required" .Values.global.awsAccountId }}.dkr.ecr.{{ .Values.global.awsRegion }}.amazonaws.com/{{ .Values.courseService.image.repository }}:{{ required "Image tag is required" .Values.global.imageTag }}"
+          imagePullPolicy: {{ .Values.courseService.image.pullPolicy }}
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.courseService.containerPort }}
+              protocol: TCP
+
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: frescoplay-config
+                  key: DB_HOST
+
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: frescoplay-config
+                  key: DB_PORT
+
+            - name: COURSE_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: COURSE_DB_USERNAME
+
+            - name: COURSE_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: COURSE_DB_PASSWORD
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: JWT_SECRET
+
+          resources:
+            {{- toYaml .Values.courseService.resources | nindent 12 }}
+
+          {{- if .Values.courseService.probes.startup.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.courseService.probes.startup.path }}
+              port: {{ .Values.courseService.containerPort }}
+            failureThreshold: {{ .Values.courseService.probes.startup.failureThreshold }}
+            periodSeconds: {{ .Values.courseService.probes.startup.periodSeconds }}
+          {{- end }}
+
+          {{- if .Values.courseService.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.courseService.probes.readiness.path }}
+              port: {{ .Values.courseService.containerPort }}
+            periodSeconds: {{ .Values.courseService.probes.readiness.periodSeconds }}
+          {{- end }}
+
+          {{- if .Values.courseService.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.courseService.probes.liveness.path }}
+              port: {{ .Values.courseService.containerPort }}
+            periodSeconds: {{ .Values.courseService.probes.liveness.periodSeconds }}
+          {{- end }}

@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: assessment-service
+  labels:
+    app: assessment-service
+    app.kubernetes.io/name: frescoplay
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  {{- if not .Values.assessmentService.autoscaling.enabled }}
+  replicas: {{ .Values.assessmentService.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: assessment-service
+  template:
+    metadata:
+      labels:
+        app: assessment-service
+    spec:
+      containers:
+        - name: assessment-service
+          image: "{{ required "AWS account ID is required" .Values.global.awsAccountId }}.dkr.ecr.{{ .Values.global.awsRegion }}.amazonaws.com/{{ .Values.assessmentService.image.repository }}:{{ required "Image tag is required" .Values.global.imageTag }}"
+          imagePullPolicy: {{ .Values.assessmentService.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.assessmentService.containerPort }}
+              protocol: TCP
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: frescoplay-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: frescoplay-config
+                  key: DB_PORT
+            - name: ASSESSMENT_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: ASSESSMENT_DB_USERNAME
+            - name: ASSESSMENT_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: ASSESSMENT_DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: JWT_SECRET
+          resources:
+            {{- toYaml .Values.assessmentService.resources | nindent 12 }}
+          {{- if .Values.assessmentService.probes.startup.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.assessmentService.probes.startup.path }}
+              port: {{ .Values.assessmentService.containerPort }}
+            failureThreshold: {{ .Values.assessmentService.probes.startup.failureThreshold }}
+            periodSeconds: {{ .Values.assessmentService.probes.startup.periodSeconds }}
+          {{- end }}
+          {{- if .Values.assessmentService.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.assessmentService.probes.readiness.path }}
+              port: {{ .Values.assessmentService.containerPort }}
+            periodSeconds: {{ .Values.assessmentService.probes.readiness.periodSeconds }}
+          {{- end }}
+          {{- if .Values.assessmentService.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.assessmentService.probes.liveness.path }}
+              port: {{ .Values.assessmentService.containerPort }}
+            periodSeconds: {{ .Values.assessmentService.probes.liveness.periodSeconds }}
+          {{- end }}

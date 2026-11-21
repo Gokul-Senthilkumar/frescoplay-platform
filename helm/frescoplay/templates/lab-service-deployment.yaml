@@ -1,0 +1,78 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lab-service
+  labels:
+    app: lab-service
+    app.kubernetes.io/name: frescoplay
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  {{- if not .Values.labService.autoscaling.enabled }}
+  replicas: {{ .Values.labService.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: lab-service
+  template:
+    metadata:
+      labels:
+        app: lab-service
+    spec:
+      containers:
+        - name: lab-service
+          image: "{{ required "AWS account ID is required" .Values.global.awsAccountId }}.dkr.ecr.{{ .Values.global.awsRegion }}.amazonaws.com/{{ .Values.labService.image.repository }}:{{ required "Image tag is required" .Values.global.imageTag }}"
+          imagePullPolicy: {{ .Values.labService.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.labService.containerPort }}
+              protocol: TCP
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: frescoplay-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: frescoplay-config
+                  key: DB_PORT
+            - name: LAB_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: LAB_DB_USERNAME
+            - name: LAB_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: LAB_DB_PASSWORD
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: JWT_SECRET
+          resources:
+            {{- toYaml .Values.labService.resources | nindent 12 }}
+          {{- if .Values.labService.probes.startup.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.labService.probes.startup.path }}
+              port: {{ .Values.labService.containerPort }}
+            failureThreshold: {{ .Values.labService.probes.startup.failureThreshold }}
+            periodSeconds: {{ .Values.labService.probes.startup.periodSeconds }}
+          {{- end }}
+          {{- if .Values.labService.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.labService.probes.readiness.path }}
+              port: {{ .Values.labService.containerPort }}
+            periodSeconds: {{ .Values.labService.probes.readiness.periodSeconds }}
+          {{- end }}
+          {{- if .Values.labService.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.labService.probes.liveness.path }}
+              port: {{ .Values.labService.containerPort }}
+            periodSeconds: {{ .Values.labService.probes.liveness.periodSeconds }}
+          {{- end }}
