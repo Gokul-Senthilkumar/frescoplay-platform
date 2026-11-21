@@ -97,6 +97,7 @@ jobs:
           echo "===== Helm Chart Lint ====="
 
           helm lint ./helm/frescoplay \
+            -f ./helm/frescoplay/values-lab.yaml \
             --set-string global.awsAccountId="$AWS_ACCOUNT_ID" \
             --set-string global.awsRegion="$AWS_REGION" \
             --set-string global.imageTag="$IMAGE_TAG" \
@@ -106,6 +107,7 @@ jobs:
 
           helm template frescoplay ./helm/frescoplay \
             --namespace "$K8S_NAMESPACE" \
+            -f ./helm/frescoplay/values-lab.yaml \
             --set-string global.awsAccountId="$AWS_ACCOUNT_ID" \
             --set-string global.awsRegion="$AWS_REGION" \
             --set-string global.imageTag="$IMAGE_TAG" \
@@ -118,6 +120,20 @@ jobs:
             | sort \
             | uniq -c
 
+          DEPLOYMENT_COUNT="$(grep -c '^kind: Deployment$' /tmp/frescoplay-helm-rendered.yaml)"
+          HPA_COUNT="$(grep -c '^kind: HorizontalPodAutoscaler$' /tmp/frescoplay-helm-rendered.yaml)"
+
+          if [ "$DEPLOYMENT_COUNT" -ne 5 ]; then
+            echo "Expected 5 Deployments, found $DEPLOYMENT_COUNT"
+            exit 1
+          fi
+
+          if [ "$HPA_COUNT" -ne 0 ]; then
+            echo "Expected 0 HPAs for lab deployment, found $HPA_COUNT"
+            exit 1
+          fi
+
+          echo "Lab Helm configuration validation passed."
           echo "Helm chart validation completed successfully."
 
       - name: Verify AWS Identity
@@ -243,6 +259,7 @@ jobs:
 
           helm upgrade --install frescoplay ./helm/frescoplay \
             --namespace "$K8S_NAMESPACE" \
+            -f ./helm/frescoplay/values-lab.yaml \
             --set-string global.awsAccountId="$AWS_ACCOUNT_ID" \
             --set-string global.awsRegion="$AWS_REGION" \
             --set-string global.imageTag="$IMAGE_TAG" \
