@@ -121,7 +121,7 @@ jobs:
             | uniq -c
 
           DEPLOYMENT_COUNT="$(grep -c '^kind: Deployment$' /tmp/frescoplay-helm-rendered.yaml)"
-          HPA_COUNT="$(grep -c '^kind: HorizontalPodAutoscaler$' /tmp/frescoplay-helm-rendered.yaml)"
+          HPA_COUNT="$(grep -c '^kind: HorizontalPodAutoscaler$' /tmp/frescoplay-helm-rendered.yaml || true)"
 
           if [ "$DEPLOYMENT_COUNT" -ne 5 ]; then
             echo "Expected 5 Deployments, found $DEPLOYMENT_COUNT"
