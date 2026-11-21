@@ -18,7 +18,7 @@ env:
   K8S_NAMESPACE: frescoplay
   EKS_CLUSTER_NAME: eks-cicd
   DB_INSTANCE_IDENTIFIER: frescoplay-mysql-prod
-  AWS_ROLE_ARN: arn:aws:iam::167405328400:role/GitHubActions-FrescoPlay-Role
+  AWS_ROLE_ARN: arn:aws:iam::854710378081:role/GitHubActions-FrescoPlay-Role
 
 jobs:
   build-push-deploy:
@@ -42,6 +42,11 @@ jobs:
 
       - name: Setup kubectl
         uses: azure/setup-kubectl@v4
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.21.4
 
       - name: Configure AWS Credentials Using OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -82,6 +87,38 @@ jobs:
           echo "AWS_ACCOUNT_ID=${AWS_ACCOUNT_ID}" >> "$GITHUB_ENV"
           echo "RDS_ENDPOINT=${RDS_ENDPOINT}" >> "$GITHUB_ENV"
           echo "ECR_REGISTRY=${ECR_REGISTRY}" >> "$GITHUB_ENV"
+
+      - name: Validate FrescoPlay Helm Chart
+        env:
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          echo "===== Helm Chart Lint ====="
+
+          helm lint ./helm/frescoplay \
+            --set-string global.awsAccountId="$AWS_ACCOUNT_ID" \
+            --set-string global.awsRegion="$AWS_REGION" \
+            --set-string global.imageTag="$IMAGE_TAG" \
+            --set-string global.rdsEndpoint="$RDS_ENDPOINT"
+
+          echo "===== Helm Template Validation ====="
+
+          helm template frescoplay ./helm/frescoplay \
+            --namespace "$K8S_NAMESPACE" \
+            --set-string global.awsAccountId="$AWS_ACCOUNT_ID" \
+            --set-string global.awsRegion="$AWS_REGION" \
+            --set-string global.imageTag="$IMAGE_TAG" \
+            --set-string global.rdsEndpoint="$RDS_ENDPOINT" \
+            > /tmp/frescoplay-helm-rendered.yaml
+
+          echo "===== Rendered Kubernetes Resources ====="
+
+          grep '^kind:' /tmp/frescoplay-helm-rendered.yaml \
+            | sort \
+            | uniq -c
+
+          echo "Helm chart validation completed successfully."
 
       - name: Verify AWS Identity
         run: aws sts get-caller-identity
@@ -145,17 +182,53 @@ jobs:
             --region "$AWS_REGION" \
             --name "$EKS_CLUSTER_NAME"
 
-      - name: Verify Namespace Deployment Permissions
+
+      - name: Verify Helm Deployment Permissions
         run: |
           set -euo pipefail
 
-          kubectl auth can-i create deployments \
-            --namespace "$K8S_NAMESPACE"
+          check_permission() {
+            local verb="$1"
+            local resource="$2"
 
-          kubectl auth can-i create services \
-            --namespace "$K8S_NAMESPACE"
+            if ! kubectl auth can-i "$verb" "$resource" \
+              --namespace "$K8S_NAMESPACE" | grep -qx "yes"; then
+              echo "Missing permission: $verb $resource"
+              exit 1
+            fi
+          }
 
-      - name: Render and Deploy FrescoPlay to EKS
+          echo "Checking Helm release storage permissions..."
+
+          for verb in get list create update delete; do
+            check_permission "$verb" secrets
+          done
+
+          echo "Checking application resource permissions..."
+
+          for resource in \
+            deployments \
+            services \
+            configmaps \
+            ingresses \
+            horizontalpodautoscalers
+          do
+            for verb in get list create update patch delete; do
+              check_permission "$verb" "$resource"
+            done
+          done
+
+          echo "Checking rollout verification permissions..."
+
+          for verb in get list watch; do
+            check_permission "$verb" deployments
+            check_permission "$verb" pods
+          done
+
+          echo "All required Helm deployment permissions verified."
+
+
+      - name: Deploy FrescoPlay Using Helm
         env:
           IMAGE_TAG: ${{ github.sha }}
         run: |
@@ -165,34 +238,32 @@ jobs:
           : "${RDS_ENDPOINT:?RDS_ENDPOINT is missing}"
           : "${IMAGE_TAG:?IMAGE_TAG is missing}"
 
-          echo "Deploying image tag: $IMAGE_TAG"
+          echo "Deploying FrescoPlay using Helm"
+          echo "Image tag: $IMAGE_TAG"
 
-          kubectl kustomize k8s/overlays/lab \
-            > /tmp/frescoplay-template.yaml
+          helm upgrade --install frescoplay ./helm/frescoplay \
+            --namespace "$K8S_NAMESPACE" \
+            --set-string global.awsAccountId="$AWS_ACCOUNT_ID" \
+            --set-string global.awsRegion="$AWS_REGION" \
+            --set-string global.imageTag="$IMAGE_TAG" \
+            --set-string global.rdsEndpoint="$RDS_ENDPOINT" \
+            --atomic \
+            --wait \
+            --timeout 10m \
+            --history-max 10
 
-          sed \
-            -e "s/\${AWS_ACCOUNT_ID}/${AWS_ACCOUNT_ID}/g" \
-            -e "s/\${RDS_ENDPOINT}/${RDS_ENDPOINT}/g" \
-            -e "s/\${IMAGE_TAG}/${IMAGE_TAG}/g" \
-            /tmp/frescoplay-template.yaml \
-            > /tmp/frescoplay-rendered.yaml
+          echo "===== Helm Release Status ====="
 
-          if grep -nF '${' /tmp/frescoplay-rendered.yaml; then
-            echo "Unresolved placeholders remain. Deployment stopped."
-            exit 1
-          fi
+          helm status frescoplay \
+            --namespace "$K8S_NAMESPACE"
 
-          if grep -nF ':IMAGE_TAG' /tmp/frescoplay-rendered.yaml; then
-            echo "An old IMAGE_TAG placeholder remains. Deployment stopped."
-            exit 1
-          fi
+          echo "===== Helm Release History ====="
 
-          echo "Rendered image references and database endpoint:"
-          grep -nE 'image:|DB_HOST:' /tmp/frescoplay-rendered.yaml
+          helm history frescoplay \
+            --namespace "$K8S_NAMESPACE"
 
-          kubectl apply -f /tmp/frescoplay-rendered.yaml
 
-      - name: Verify Deployment Rollouts
+      - name: Verify Helm Deployment Rollouts
         run: |
           set -euo pipefail
 
@@ -211,9 +282,20 @@ jobs:
               --timeout=5m
           done
 
-      - name: Deployment Summary
+          echo "All five FrescoPlay deployments are ready."
+
+
+      - name: Helm Deployment Summary
         if: always()
         run: |
+          echo "===== Helm Release ====="
+          helm list \
+            --namespace "$K8S_NAMESPACE" || true
+
+          echo "===== Helm Release Status ====="
+          helm status frescoplay \
+            --namespace "$K8S_NAMESPACE" || true
+
           echo "===== Deployments ====="
           kubectl get deployments \
             --namespace "$K8S_NAMESPACE" || true
@@ -224,6 +306,10 @@ jobs:
 
           echo "===== Services ====="
           kubectl get services \
+            --namespace "$K8S_NAMESPACE" || true
+
+          echo "===== HPA ====="
+          kubectl get hpa \
             --namespace "$K8S_NAMESPACE" || true
 
           echo "===== Ingress ====="

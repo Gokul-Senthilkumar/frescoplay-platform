@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  labels:
+    app: user-service
+    app.kubernetes.io/name: frescoplay
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  {{- if not .Values.userService.autoscaling.enabled }}
+  replicas: {{ .Values.userService.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: user-service
+  template:
+    metadata:
+      labels:
+        app: user-service
+    spec:
+      containers:
+        - name: user-service
+          image: "{{ required "AWS account ID is required" .Values.global.awsAccountId }}.dkr.ecr.{{ .Values.global.awsRegion }}.amazonaws.com/{{ .Values.userService.image.repository }}:{{ required "Image tag is required" .Values.global.imageTag }}"
+          imagePullPolicy: {{ .Values.userService.image.pullPolicy }}
+
+          ports:
+            - name: http
+              containerPort: {{ .Values.userService.containerPort }}
+              protocol: TCP
+
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: frescoplay-config
+                  key: DB_HOST
+
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: frescoplay-config
+                  key: DB_PORT
+
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: DB_USERNAME
+
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: DB_PASSWORD
+
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: frescoplay-secrets
+                  key: JWT_SECRET
+
+          resources:
+            {{- toYaml .Values.userService.resources | nindent 12 }}
+
+          {{- if .Values.userService.probes.startup.enabled }}
+          startupProbe:
+            httpGet:
+              path: {{ .Values.userService.probes.startup.path }}
+              port: {{ .Values.userService.containerPort }}
+            failureThreshold: {{ .Values.userService.probes.startup.failureThreshold }}
+            periodSeconds: {{ .Values.userService.probes.startup.periodSeconds }}
+          {{- end }}
+
+          {{- if .Values.userService.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.userService.probes.readiness.path }}
+              port: {{ .Values.userService.containerPort }}
+            periodSeconds: {{ .Values.userService.probes.readiness.periodSeconds }}
+          {{- end }}
+
+          {{- if .Values.userService.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.userService.probes.liveness.path }}
+              port: {{ .Values.userService.containerPort }}
+            periodSeconds: {{ .Values.userService.probes.liveness.periodSeconds }}
+          {{- end }}

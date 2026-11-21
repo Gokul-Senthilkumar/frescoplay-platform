@@ -1,0 +1,221 @@
+global:
+  awsAccountId: ""
+  awsRegion: us-east-1
+  imageTag: ""
+  rdsEndpoint: ""
+  dbPort: "3306"
+
+frontend:
+  replicaCount: 2
+
+  image:
+    repository: frescoplay-frontend
+    pullPolicy: IfNotPresent
+
+  containerPort: 8080
+
+  service:
+    type: ClusterIP
+    port: 8080
+  
+  environment:
+    userServiceUrl: "http://user-service:8081"
+    courseServiceUrl: "http://course-service:8082"
+    assessmentServiceUrl: "http://assessment-service:8083"
+    labServiceUrl: "http://lab-service:8084"
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+userService:
+  replicaCount: 2
+
+  image:
+    repository: frescoplay-user-service
+    pullPolicy: IfNotPresent
+
+  containerPort: 8081
+
+  service:
+    type: ClusterIP
+    port: 8081
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+  probes:
+    startup:
+      enabled: true
+      path: /actuator/health
+      failureThreshold: 30
+      periodSeconds: 10
+
+    readiness:
+      enabled: true
+      path: /actuator/health
+      periodSeconds: 10
+
+    liveness:
+      enabled: true
+      path: /actuator/health
+      periodSeconds: 20
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+courseService:
+  replicaCount: 2
+
+  image:
+    repository: frescoplay-course-service
+    pullPolicy: IfNotPresent
+
+  containerPort: 8082
+
+  service:
+    type: ClusterIP
+    port: 8082
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+  probes:
+    startup:
+      enabled: true
+      path: /actuator/health
+      failureThreshold: 30
+      periodSeconds: 10
+
+    readiness:
+      enabled: true
+      path: /actuator/health
+      periodSeconds: 10
+
+    liveness:
+      enabled: true
+      path: /actuator/health
+      periodSeconds: 20
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+assessmentService:
+  replicaCount: 2
+
+  image:
+    repository: frescoplay-assessment-service
+    pullPolicy: IfNotPresent
+
+  containerPort: 8083
+
+  service:
+    type: ClusterIP
+    port: 8083
+
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 1000m
+      memory: 2Gi
+
+  probes:
+    startup:
+      enabled: true
+      path: /actuator/health
+      failureThreshold: 30
+      periodSeconds: 10
+
+    readiness:
+      enabled: true
+      path: /actuator/health
+      periodSeconds: 10
+
+    liveness:
+      enabled: true
+      path: /actuator/health
+      periodSeconds: 20
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 15
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+
+labService:
+  replicaCount: 2
+
+  image:
+    repository: frescoplay-lab-service
+    pullPolicy: IfNotPresent
+
+  containerPort: 8084
+
+  service:
+    type: ClusterIP
+    port: 8084
+
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+
+  probes:
+    startup:
+      enabled: true
+      path: /actuator/health
+      failureThreshold: 30
+      periodSeconds: 10
+
+    readiness:
+      enabled: true
+      path: /actuator/health
+      periodSeconds: 10
+
+    liveness:
+      enabled: true
+      path: /actuator/health
+      periodSeconds: 20
+
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+

@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app: frontend
+    app.kubernetes.io/name: frescoplay
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  {{- if not .Values.frontend.autoscaling.enabled }}
+  replicas: {{ .Values.frontend.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: "{{ required "AWS account ID is required" .Values.global.awsAccountId }}.dkr.ecr.{{ .Values.global.awsRegion }}.amazonaws.com/{{ .Values.frontend.image.repository }}:{{ required "Image tag is required" .Values.global.imageTag }}"
+          imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.frontend.containerPort }}
+              protocol: TCP
+          env:
+            - name: USER_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: frescoplay-config
+                  key: USER_SERVICE_URL
+            - name: COURSE_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: frescoplay-config
+                  key: COURSE_SERVICE_URL
+            - name: ASSESSMENT_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: frescoplay-config
+                  key: ASSESSMENT_SERVICE_URL
+            - name: LAB_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: frescoplay-config
+                  key: LAB_SERVICE_URL
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}
