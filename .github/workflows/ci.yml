@@ -36,11 +36,25 @@ jobs:
       - name: Build and Test All Microservices
         run: mvn --batch-mode --no-transfer-progress clean verify
 
-      - name: Setup kubectl
-        uses: azure/setup-kubectl@v4
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.21.4
 
-      - name: Validate Kubernetes Manifests
+      - name: Validate Helm Chart
         run: |
           set -euo pipefail
-          kubectl kustomize k8s/overlays/lab > /tmp/frescoplay-manifests.yaml
-          echo "Kubernetes manifests rendered successfully."
+
+          helm lint ./helm/frescoplay \
+            -f ./helm/frescoplay/values-lab.yaml
+
+          helm template frescoplay ./helm/frescoplay \
+            --namespace frescoplay \
+            -f ./helm/frescoplay/values-lab.yaml \
+            --set-string global.awsAccountId=123456789012 \
+            --set-string global.awsRegion=us-east-1 \
+            --set-string global.imageTag=ci-validation \
+            --set-string global.rdsEndpoint=example.rds.amazonaws.com \
+            > /tmp/frescoplay-rendered.yaml
+
+          echo "Helm chart validation successful."

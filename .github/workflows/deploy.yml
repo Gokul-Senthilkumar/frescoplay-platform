@@ -18,7 +18,7 @@ env:
   K8S_NAMESPACE: frescoplay
   EKS_CLUSTER_NAME: eks-cicd
   DB_INSTANCE_IDENTIFIER: frescoplay-mysql-prod
-  AWS_ROLE_ARN: arn:aws:iam::675527579073:role/GitHubActions-FrescoPlay-Role
+  AWS_ROLE_ARN: arn:aws:iam::408203612554:role/GitHubActions-FrescoPlay-Role
 
 jobs:
   build-push-deploy:
